@@ -8,9 +8,9 @@ var renderer, stats, container
 
 var camera, scene, cameraTarget
 
-var bounds = { height: 1000, width: 1000, depth: 1000,
-               near: 0.1, far: 1000, left: -500, right: 500, top: 1000, bottom: 0,
-               midX: 0, midY: 500, midZ: -500 }
+var bounds = { height: SCREEN_HEIGHT, width: SCREEN_WIDTH, depth: 1000,
+               near: 0.1, far: -1000, left: -SCREEN_WIDTH / 2, right: SCREEN_WIDTH / 2, top: SCREEN_HEIGHT, bottom: 0,
+               mid: new THREE.Vector3( 0, SCREEN_HEIGHT / 2, -500 ) }
 
 var directionalLight, pointLight
 var lightVal = 0, lightDir = 1
@@ -27,8 +27,8 @@ function init() {
   container = document.getElementById( 'container' )
   
   // CAMERA
-  camera = new THREE.PerspectiveCamera( 75, SCREEN_WIDTH / SCREEN_HEIGHT, bounds.near, bounds.far )
-  camera.position.set( bounds.midX , bounds.midY, 500 )
+  camera = new THREE.PerspectiveCamera( 75, SCREEN_WIDTH / SCREEN_HEIGHT, bounds.near, bounds.far * 2 )
+  camera.position.set( bounds.mid.x , bounds.mid.y, 600 )
   //cameraTarget = new THREE.Vector3( 0, 0, -1 )
   //camera.lookAt( cameraTarget )
   
@@ -47,40 +47,44 @@ function init() {
   // Walls
   var walls = new THREE.Object3D();
   
-  
-  var planeGeometry = new THREE.PlaneGeometry( bounds.width, bounds.height, 10, 10 )
+
   var planeMaterial = new THREE.MeshBasicMaterial( { wireframe: true } )
+  var segments = 20;
   
   
   // ground
-  plane = new THREE.Mesh( planeGeometry, planeMaterial )
-  plane.rotation.x = THREE.Math.degToRad( 90 )
-  plane.position.set( bounds.midX, bounds.bottom, bounds.midZ )
-  walls.add( plane )
+  var ground = new THREE.Mesh( new THREE.PlaneGeometry( bounds.width, bounds.depth, segments, segments ), planeMaterial )
+  ground.rotation.x = THREE.Math.degToRad( 90 )
+  ground.position.set( bounds.mid.x, bounds.bottom, bounds.mid.z )
+  walls.add( ground )
   
   // back
-  plane = new THREE.Mesh( planeGeometry, planeMaterial )
-  plane.position.set( bounds.midX, bounds.midY, bounds.midZ )
-  walls.add( plane )
+  var back = new THREE.Mesh( new THREE.PlaneGeometry( bounds.width, bounds.height, segments, segments ), planeMaterial )
+  back.position.set( bounds.mid.x, bounds.mid.y, bounds.far )
+  walls.add( back )
   
   // top
-  plane = new THREE.Mesh( planeGeometry, planeMaterial )
-  plane.rotation.x = THREE.Math.degToRad( 90 )
-  plane.position.set( bounds.midX, bounds.top, bounds.midZ )
-  walls.add( plane )
+  var top = new THREE.Mesh( new THREE.PlaneGeometry( bounds.width, bounds.depth, segments, segments ), planeMaterial )
+  top.rotation.x = THREE.Math.degToRad( 90 )
+  top.position.set( bounds.mid.x, bounds.top, bounds.mid.z )
+  walls.add( top )
   
   
   // right
-  plane = new THREE.Mesh( planeGeometry, planeMaterial )
-  plane.rotation.y = THREE.Math.degToRad( 90 )
-  plane.position.set( bounds.right, bounds.midY, bounds.midZ )
-  walls.add( plane )
+  var right = new THREE.Mesh( new THREE.PlaneGeometry( bounds.depth, bounds.height, segments, segments ), planeMaterial )
+  right.rotation.y = THREE.Math.degToRad( 90 )
+  right.position.set( bounds.right, bounds.mid.y, bounds.mid.z )
+  walls.add( right )
   
-  // lseft
-  plane = new THREE.Mesh( planeGeometry, planeMaterial )
-  plane.rotation.y = THREE.Math.degToRad( -90 )
-  plane.position.set( bounds.left, bounds.midY, bounds.midZ )
-  walls.add( plane )
+  // left
+  var left = new THREE.Mesh( new THREE.PlaneGeometry( bounds.depth, bounds.height, segments, segments ), planeMaterial )
+  left.rotation.y = THREE.Math.degToRad( -90 )
+  left.position.set( bounds.left, bounds.mid.y, bounds.mid.z )
+  walls.add( left )
+  
+  //var orb = new THREE.Mesh( new THREE.SphereGeometry( bounds.width, segments, segments ) , planeMaterial)
+  //orb.position = bounds.mid
+  //scene.add ( orb )
   
   scene.add ( walls )
 
@@ -105,7 +109,7 @@ function init() {
   textGeo.computeBoundingBox()
   var textWidth = textGeo.boundingBox.max.x - textGeo.boundingBox.min.x;
 
-  textMesh.position.set( bounds.midX - textWidth / 2, bounds.height * (2/3), bounds.midZ );
+  textMesh.position.set( bounds.mid.x - textWidth / 2, bounds.height * (2/3), bounds.mid.z );
   scene.add( textMesh );
   
   // beveled and sized
@@ -121,8 +125,14 @@ function init() {
   textGeom2.computeBoundingBox();
   var textWidth2 = textGeom2.boundingBox.max.x - textGeom2.boundingBox.min.x;
 
-  textMesh2.position.set( bounds.midX - textWidth2 / 2, bounds.height * (1/3), bounds.midZ );
-  scene.add( textMesh2 );
+  textMesh2.position.set( - textWidth2 / 2, 0, 0);
+  var textPivot = new THREE.Object3D()
+  textPivot.position.x = bounds.mid.x
+  textPivot.position.y = bounds.height / 3
+  textPivot.position.z = bounds.mid.z
+  textPivot.name = "hello"
+  textPivot.add( textMesh2 )
+  scene.add( textPivot )
 
   // STATS
 
@@ -154,6 +164,8 @@ function render() {
 }
 
 function animate() {
+  
+  scene.getObjectByName( "hello" ).rotation.y += .01;
     window.requestAnimationFrame( animate )
     render()
 }
