@@ -35,3 +35,7 @@ I want it to be clean. Not busy, obvious focal point.
 
 http://threejs.org/examples/#webgl_terrain_dynamic
 http://threejs.org/examples/#webgl_shadowmap_performance
+
+# TODO
+
+* hide cube face

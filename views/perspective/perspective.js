@@ -26,8 +26,11 @@ function init() {
   container = document.getElementById( 'container' )
   
   // CAMERA
-  camera = new THREE.PerspectiveCamera( 75, SCREEN_WIDTH / SCREEN_HEIGHT, bounds.near, bounds.far * 2 )
-  camera.position.set( bounds.mid.x , bounds.mid.y, 600 )
+  var cameraDistance = 600;
+  camera = new THREE.PerspectiveCamera( THREE.Math.radToDeg( 2 * Math.atan( ( SCREEN_HEIGHT / 2 )  / cameraDistance ) ), 
+                                        SCREEN_WIDTH / SCREEN_HEIGHT, 
+                                        bounds.near, bounds.far * 2 )
+  camera.position.set( bounds.mid.x , bounds.mid.y, cameraDistance )
   //cameraTarget = new THREE.Vector3( 0, 0, -1 )
   //camera.lookAt( cameraTarget )
   
@@ -43,49 +46,18 @@ function init() {
   pointLight.position.set( 0, 0, 0 )
   scene.add( pointLight );
   
-  // Walls
-  var walls = new THREE.Object3D();
-  
-
-  var planeMaterial = new THREE.MeshBasicMaterial( { wireframe: true } )
   var segments = 20;
+  var geometry = new THREE.BoxGeometry( bounds.width, bounds.height, bounds.depth , segments, segments, segments);
+  var material = new THREE.MeshBasicMaterial( { wireframe: true } );
+  var cube = new THREE.Mesh( geometry, material );
+  cube.position.x = bounds.mid.x
+  cube.position.y = bounds.mid.y
+  cube.position.z = bounds.mid.z
+  cube.name = 'walls';
+
+  scene.add( cube );
   
-  
-  // ground
-  var ground = new THREE.Mesh( new THREE.PlaneGeometry( bounds.width, bounds.depth, segments, segments ), planeMaterial )
-  ground.rotation.x = THREE.Math.degToRad( 90 )
-  ground.position.set( bounds.mid.x, bounds.bottom, bounds.mid.z )
-  walls.add( ground )
-  
-  // back
-  var back = new THREE.Mesh( new THREE.PlaneGeometry( bounds.width, bounds.height, segments, segments ), planeMaterial )
-  back.position.set( bounds.mid.x, bounds.mid.y, bounds.far )
-  walls.add( back )
-  
-  // top
-  var top = new THREE.Mesh( new THREE.PlaneGeometry( bounds.width, bounds.depth, segments, segments ), planeMaterial )
-  top.rotation.x = THREE.Math.degToRad( 90 )
-  top.position.set( bounds.mid.x, bounds.top, bounds.mid.z )
-  walls.add( top )
-  
-  
-  // right
-  var right = new THREE.Mesh( new THREE.PlaneGeometry( bounds.depth, bounds.height, segments, segments ), planeMaterial )
-  right.rotation.y = THREE.Math.degToRad( 90 )
-  right.position.set( bounds.right, bounds.mid.y, bounds.mid.z )
-  walls.add( right )
-  
-  // left
-  var left = new THREE.Mesh( new THREE.PlaneGeometry( bounds.depth, bounds.height, segments, segments ), planeMaterial )
-  left.rotation.y = THREE.Math.degToRad( -90 )
-  left.position.set( bounds.left, bounds.mid.y, bounds.mid.z )
-  walls.add( left )
-  
-  //var orb = new THREE.Mesh( new THREE.SphereGeometry( bounds.width, segments, segments ) , planeMaterial)
-  //orb.position = bounds.mid
-  //scene.add ( orb )
-  
-  scene.add ( walls )
+  //scene.add ( walls )
 
   // RENDERER
   renderer = new THREE.WebGLRenderer( { antialias: true } )
@@ -148,12 +120,18 @@ function init() {
 }
 
 function onWindowResize( event ) {
+  
+  var walls = scene.getObjectByName( 'walls' );
+  walls.scale.y *= window.innerHeight / SCREEN_HEIGHT
+  walls.scale.x *= window.innerWidth / SCREEN_WIDTH
 
   SCREEN_WIDTH = window.innerWidth
   SCREEN_HEIGHT = window.innerHeight
 
   renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT )
   camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT
+  camera.fov = THREE.Math.radToDeg( 2 * Math.atan( ( SCREEN_HEIGHT / 2)  / camera.position.z ) )
+  console.log(camera.fov)
   camera.updateProjectionMatrix()
 
 }
