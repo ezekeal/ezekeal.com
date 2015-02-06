@@ -4,18 +4,11 @@ if ( ! Detector.webgl ) Detector.addGetWebGLMessage()
 var SCREEN_WIDTH = window.innerWidth,
     SCREEN_HEIGHT = window.innerHeight
 
-var renderer, stats, container
+var renderer, container
 
-var camera, scene, cameraTarget
+var camera, scene
 
 var bounds = Boundaries( SCREEN_WIDTH, SCREEN_HEIGHT, 1000 )
-
-var directionalLight, pointLight
-var lightVal = 0, lightDir = 1
-
-var terrain
-
-var textMesh1
 
 init()
 animate()
