@@ -7,9 +7,7 @@ var renderer, stats, container
 
 var camera, scene, cameraTarget
 
-var bounds = { height: SCREEN_HEIGHT, width: SCREEN_WIDTH, depth: 1000,
-               near: 0.1, far: -1000, left: -SCREEN_WIDTH / 2, right: SCREEN_WIDTH / 2, top: SCREEN_HEIGHT, bottom: 0,
-               mid: new THREE.Vector3( 0, SCREEN_HEIGHT / 2, -500 ) }
+var bounds = Boundaries( SCREEN_WIDTH, SCREEN_HEIGHT, 1000 )
 
 var directionalLight, pointLight
 var lightVal = 0, lightDir = 1
@@ -31,33 +29,88 @@ function init() {
                                         SCREEN_WIDTH / SCREEN_HEIGHT, 
                                         bounds.near, bounds.far * 2 )
   camera.position.set( bounds.mid.x , bounds.mid.y, cameraDistance )
-  //cameraTarget = new THREE.Vector3( 0, 0, -1 )
-  //camera.lookAt( cameraTarget )
   
   // SCENE
   scene = new THREE.Scene()
 
   // LIGHTS
-  scene.add( new THREE.AmbientLight( 0x111111 ) )
-  directionalLight = new THREE.DirectionalLight( 0xffffff, 1.15 )
-  directionalLight.position.set( 500, 2000, 0 )
-  scene.add( directionalLight )
-  pointLight = new THREE.PointLight( 0xff4400, 1.5 )
-  pointLight.position.set( 0, 0, 0 )
-  scene.add( pointLight );
   
-  var segments = 20;
-  var geometry = new THREE.BoxGeometry( bounds.width, bounds.height, bounds.depth , segments, segments, segments);
-  var material = new THREE.MeshBasicMaterial( { wireframe: true } );
-  var cube = new THREE.Mesh( geometry, material );
-  cube.position.x = bounds.mid.x
-  cube.position.y = bounds.mid.y
-  cube.position.z = bounds.mid.z
-  cube.name = 'walls';
+  var lights = {
+    ambient: new THREE.AmbientLight( 0x222222 ),
+    directional: new THREE.DirectionalLight( 0xffffff, 1.15 ),
+    point: new THREE.PointLight( 0xffffff, 2 ),
+    spot: new THREE.SpotLight( 0xffffff, 6, 1200 )
+  }
+  
+  var ambientLight = lights.ambient
+  scene.add( ambientLight )
+  
+  var sceneLight =  lights.point
+  sceneLight.position.set( bounds.mid.x, bounds.mid.y, bounds.near-1 )
+  sceneLight.name = "sceneLight"
 
-  scene.add( cube );
+  scene.add( sceneLight )
   
-  //scene.add ( walls )
+  // WALLS
+  var segments = 1;
+  var geometry = new THREE.BoxGeometry( bounds.width, bounds.height, bounds.depth , segments, segments, segments);
+  var materials = {
+    basic: new THREE.MeshBasicMaterial( { color: 0x888888 } ),
+    lambert: new THREE.MeshLambertMaterial( { color: 0x888888 } ),
+    phong: new THREE.MeshPhongMaterial( { color: 0x888888 , specular: 0x111111 , shininess: 20 } ),
+    wireFrame: new THREE.MeshBasicMaterial( { color: 0x888888, wireframe: true } ),
+    transparent: new THREE.MeshBasicMaterial( { color: 0xffffff, transparent: true, opacity: 0.0 } ),
+    depth: new THREE.MeshDepthMaterial( { side: THREE.BackSide } )
+  }
+  
+  // container for walls
+  var box = new THREE.Object3D()
+  box.name = 'walls'
+  
+  // attributes
+  var boxMaterial = materials.phong;
+  
+  var planeGeo, plane
+  
+  // back
+  planeGeo = new THREE.PlaneGeometry(bounds.width, bounds.height, segments, segments)
+  plane = new THREE.Mesh( planeGeo, boxMaterial )
+  plane.name = 'back';
+  plane.position.set( bounds.mid.x, bounds.mid.y, bounds.far )
+  box.add( plane )
+  
+  // ground
+  planeGeo = new THREE.PlaneGeometry(bounds.width, bounds.depth, segments, segments)
+  plane = new THREE.Mesh( planeGeo, boxMaterial )
+  plane.name = 'ground';
+  plane.rotation.x = -Math.PI / 2
+  plane.position.set( bounds.mid.x, bounds.bottom, bounds.mid.z )
+  box.add( plane )
+  
+  // top
+  plane = plane.clone()
+  plane.name = 'top'
+  plane.rotation.x += Math.PI
+  plane.position.y = bounds.top
+  box.add( plane )
+  
+  // left
+  planeGeo = new THREE.PlaneGeometry( bounds.depth, bounds.height, segments, segments )
+  plane = new THREE.Mesh( planeGeo, boxMaterial )
+  plane.name = 'left'
+  plane.rotation.y = Math.PI / 2
+  plane.position.set( -bounds.width / 2, bounds.mid.y, bounds.mid.z )
+  box.add( plane )
+  
+  // right
+  plane = plane.clone()
+  plane.name = 'right'
+  plane.rotation.y +=Math.PI
+  plane.position.x = bounds.width / 2
+  box.add( plane )
+  
+  scene.add( box )
+
 
   // RENDERER
   renderer = new THREE.WebGLRenderer( { antialias: true } )
@@ -105,12 +158,6 @@ function init() {
   textPivot.add( textMesh2 )
   scene.add( textPivot )
 
-  // STATS
-
-  stats = new Stats()
-  stats.domElement.style.position = 'absolute'
-  stats.domElement.style.top = '0px'
-
   // EVENTS
   
   onWindowResize()
@@ -142,7 +189,23 @@ function render() {
 
 function animate() {
   
+  // rotate the text
   scene.getObjectByName( "hello" ).rotation.y += .01;
+  
+  // animate the light
+  scene.getObjectByName( 'sceneLight' ).intensity = Math.sin(scene.getObjectByName( "hello" ).rotation.y) / 3 + 1.0
+  
     window.requestAnimationFrame( animate )
     render()
+}
+
+
+function Boundaries(width, height, depth) 
+{
+  return { 
+    height: height, width: width, depth: depth,
+    near: 0.1, far: -depth, 
+    left: -width / 2, right: width / 2, top: height, bottom: 0,
+    mid: new THREE.Vector3( 0, height / 2, -depth / 2 ) 
+  }
 }
