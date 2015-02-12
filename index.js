@@ -3,6 +3,7 @@ var app = express()
 
 app.use(express.static('build'))
 app.use('/vendor', express.static('vendor'))
+app.use('/assets', express.static('assets'))
 
 app.get('/', function (req, res, params){
   res.redirect('/perspective')

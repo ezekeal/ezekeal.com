@@ -3,18 +3,24 @@ if ( ! Detector.webgl ) Detector.addGetWebGLMessage()
 var SCREEN_WIDTH = window.innerWidth,
     SCREEN_HEIGHT = window.innerHeight
 
-var renderer, container
+var renderer, container, scene, camera
 
-var camera, scene
+var videoTexture
 
 var bounds = Boundaries( SCREEN_WIDTH, SCREEN_HEIGHT, 1000 )
 
+// set up the variables
 init()
+
+//start the loop
 animate()
 
 function init() {
   
   container = document.getElementById( 'container' )
+  
+  // SCENE
+  scene = new THREE.Scene()
   
   // CAMERA
   var cameraDistance = 600;
@@ -22,12 +28,11 @@ function init() {
                                         SCREEN_WIDTH / SCREEN_HEIGHT, 
                                         bounds.near, bounds.far * 2 )
   camera.position.set( bounds.mid.x , bounds.mid.y, cameraDistance )
+  camera.name = 'boxCamera'
   
-  // SCENE
-  scene = new THREE.Scene()
-
+  scene.add( camera )
+  
   // LIGHTS
-  
   var lights = {
     ambient: new THREE.AmbientLight( 0x222222 ),
     directional: new THREE.DirectionalLight( 0xffffff, 1.15 ),
@@ -44,65 +49,44 @@ function init() {
 
   scene.add( sceneLight )
   
-  // WALLS
-  var segments = 1;
-  var geometry = new THREE.BoxGeometry( bounds.width, bounds.height, bounds.depth , segments, segments, segments);
+  // Texture
+  
+  var grassTexture = THREE.ImageUtils.loadTexture( "../assets/perspective/grass.jpg" )
+  grassTexture.wrapS = THREE.RepeatWrapping
+  grassTexture.wrapT = THREE.RepeatWrapping
+  grassTexture.repeat = new THREE.Vector2( 3, 3 );
+  
+  // Video Texture
+  
+  videoTexture = new THREEx.VideoTexture( "../assets/perspective/videos/storm480.mp4" )
+	var video	= videoTexture.video
+  
+  // Materials
+
   var materials = {
     basic: new THREE.MeshBasicMaterial( { color: 0x888888 } ),
     lambert: new THREE.MeshLambertMaterial( { color: 0x888888 } ),
     phong: new THREE.MeshPhongMaterial( { color: 0x888888 , specular: 0x111111 , shininess: 20 } ),
     wireFrame: new THREE.MeshBasicMaterial( { color: 0x888888, wireframe: true } ),
     transparent: new THREE.MeshBasicMaterial( { color: 0xffffff, transparent: true, opacity: 0.0 } ),
-    depth: new THREE.MeshDepthMaterial( { side: THREE.BackSide } )
+    depth: new THREE.MeshDepthMaterial( { side: THREE.BackSide } ),
+    grass: new THREE.MeshLambertMaterial( { map: grassTexture } ),
+    sky: new THREE.MeshBasicMaterial( { map: videoTexture.texture } )
   }
   
-  // container for walls
-  var box = new THREE.Object3D()
-  box.name = 'walls'
   
-  // attributes
-  var boxMaterial = materials.phong;
+  // create the view box
+  var viewBox = ViewBox( bounds, materials.phong )
   
-  var planeGeo, plane
+  var groundPlane = viewBox.getObjectByName( 'ground' )
+  groundPlane.material = materials.grass
   
-  // back
-  planeGeo = new THREE.PlaneGeometry(bounds.width, bounds.height, segments, segments)
-  plane = new THREE.Mesh( planeGeo, boxMaterial )
-  plane.name = 'back';
-  plane.position.set( bounds.mid.x, bounds.mid.y, bounds.far )
-  box.add( plane )
+  var topPlane = viewBox.getObjectByName( 'top' )
+  topPlane.material = materials.sky
   
-  // ground
-  planeGeo = new THREE.PlaneGeometry(bounds.width, bounds.depth, segments, segments)
-  plane = new THREE.Mesh( planeGeo, boxMaterial )
-  plane.name = 'ground';
-  plane.rotation.x = -Math.PI / 2
-  plane.position.set( bounds.mid.x, bounds.bottom, bounds.mid.z )
-  box.add( plane )
+  viewBox.name = 'viewBox'
   
-  // top
-  plane = plane.clone()
-  plane.name = 'top'
-  plane.rotation.x += Math.PI
-  plane.position.y = bounds.top
-  box.add( plane )
-  
-  // left
-  planeGeo = new THREE.PlaneGeometry( bounds.depth, bounds.height, segments, segments )
-  plane = new THREE.Mesh( planeGeo, boxMaterial )
-  plane.name = 'left'
-  plane.rotation.y = Math.PI / 2
-  plane.position.set( -bounds.width / 2, bounds.mid.y, bounds.mid.z )
-  box.add( plane )
-  
-  // right
-  plane = plane.clone()
-  plane.name = 'right'
-  plane.rotation.y +=Math.PI
-  plane.position.x = bounds.width / 2
-  box.add( plane )
-  
-  scene.add( box )
+  scene.add( viewBox )
 
 
   // RENDERER
@@ -113,6 +97,121 @@ function init() {
 
 
   // TEXT
+  
+  var textBlock = TextBlock()
+  textBlock.name = 'textBlock'
+  
+  viewBox.add( textBlock )
+
+  // EVENTS
+  
+  onWindowResize()
+
+  window.addEventListener('resize', onWindowResize, false)
+
+}
+
+function onWindowResize( event ) {
+  
+  var viewBox = scene.getObjectByName( 'viewBox' )
+  viewBox.scale.y *= window.innerHeight / SCREEN_HEIGHT
+  viewBox.scale.x *= window.innerWidth / SCREEN_WIDTH
+
+  SCREEN_WIDTH = window.innerWidth
+  SCREEN_HEIGHT = window.innerHeight
+
+  renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT )
+  
+  camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT
+  camera.fov = THREE.Math.radToDeg( 2 * Math.atan( ( SCREEN_HEIGHT / 2)  / camera.position.z ) )
+  camera.position.y = SCREEN_HEIGHT / 2
+  scene.getObjectByName( 'sceneLight' ).position.y = SCREEN_HEIGHT / 2
+  console.log(camera.fov)
+  camera.updateProjectionMatrix()
+
+}
+
+function render() {
+    renderer.render( scene, camera )
+}
+
+var lastTimeMsec= null
+function animate(nowMsec) {
+  
+  // rotate the text
+  scene.getObjectByName( "hello" ).rotation.y += .01;
+  
+  // animate the light
+  scene.getObjectByName( 'sceneLight' ).intensity = Math.sin( scene.getObjectByName( "hello" ).rotation.y ) / 3 + 1.1
+  
+    window.requestAnimationFrame( animate )
+    // measure time
+		lastTimeMsec	= lastTimeMsec || nowMsec-1000/60
+		var deltaMsec	= Math.min(200, nowMsec - lastTimeMsec)
+		lastTimeMsec	= nowMsec
+		// update video
+		videoTexture.update(deltaMsec/1000, nowMsec/1000)
+    render()
+}
+
+function Boundaries(width, height, depth) {
+  return { 
+    height: height, width: width, depth: depth,
+    near: 0.1, far: -depth, 
+    left: -width / 2, right: width / 2, top: height, bottom: 0,
+    mid: new THREE.Vector3( 0, height / 2, -depth / 2 ) 
+  }
+}
+
+function ViewBox(boundaries, material) {
+  
+  // container for walls
+  var box = new THREE.Object3D()
+  
+  var planeGeo, plane
+  
+  // back
+  planeGeo = new THREE.PlaneGeometry( boundaries.width, boundaries.height )
+  plane = new THREE.Mesh( planeGeo, material )
+  plane.name = 'back';
+  plane.position.set( boundaries.mid.x, boundaries.mid.y, boundaries.far )
+  box.add( plane )
+  
+  // ground
+  planeGeo = new THREE.PlaneGeometry(boundaries.width, boundaries.depth )
+  plane = new THREE.Mesh( planeGeo, material )
+  plane.name = 'ground';
+  plane.rotation.x = -Math.PI / 2
+  plane.position.set( boundaries.mid.x, boundaries.bottom, boundaries.mid.z )
+  box.add( plane )
+  
+  // top
+  plane = plane.clone()
+  plane.name = 'top'
+  plane.rotation.x += Math.PI
+  plane.position.y = boundaries.top
+  box.add( plane )
+  
+  // left
+  planeGeo = new THREE.PlaneGeometry( boundaries.depth, boundaries.height )
+  plane = new THREE.Mesh( planeGeo, material )
+  plane.name = 'left'
+  plane.rotation.y = Math.PI / 2
+  plane.position.set( -boundaries.width / 2, boundaries.mid.y, boundaries.mid.z )
+  box.add( plane )
+  
+  // right
+  plane = plane.clone()
+  plane.name = 'right'
+  plane.rotation.y +=Math.PI
+  plane.position.x = boundaries.width / 2
+  box.add( plane )
+  
+  return box
+}
+
+function TextBlock() {
+  var textBlock = new THREE.Object3D
   
   // default
   var material = new THREE.MeshPhongMaterial( {
@@ -127,7 +226,7 @@ function init() {
   var textWidth = textGeo.boundingBox.max.x - textGeo.boundingBox.min.x;
 
   textMesh.position.set( bounds.mid.x - textWidth / 2, bounds.height * (2/3), bounds.mid.z );
-  scene.add( textMesh );
+  textBlock.add( textMesh );
   
   // beveled and sized
   var material2 = new THREE.MeshPhongMaterial({
@@ -149,56 +248,7 @@ function init() {
   textPivot.position.z = bounds.mid.z
   textPivot.name = "hello"
   textPivot.add( textMesh2 )
-  scene.add( textPivot )
-
-  // EVENTS
+  textBlock.add( textPivot )
   
-  onWindowResize()
-
-  window.addEventListener('resize', onWindowResize, false)
-
-}
-
-function onWindowResize( event ) {
-  
-  var walls = scene.getObjectByName( 'walls' );
-  walls.scale.y *= window.innerHeight / SCREEN_HEIGHT
-  walls.scale.x *= window.innerWidth / SCREEN_WIDTH
-
-  SCREEN_WIDTH = window.innerWidth
-  SCREEN_HEIGHT = window.innerHeight
-
-  renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT )
-  camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT
-  camera.fov = THREE.Math.radToDeg( 2 * Math.atan( ( SCREEN_HEIGHT / 2)  / camera.position.z ) )
-  console.log(camera.fov)
-  camera.updateProjectionMatrix()
-
-}
-
-function render() {
-    renderer.render( scene, camera )
-}
-
-function animate() {
-  
-  // rotate the text
-  scene.getObjectByName( "hello" ).rotation.y += .01;
-  
-  // animate the light
-  scene.getObjectByName( 'sceneLight' ).intensity = Math.sin(scene.getObjectByName( "hello" ).rotation.y) / 3 + 1.0
-  
-    window.requestAnimationFrame( animate )
-    render()
-}
-
-
-function Boundaries(width, height, depth) 
-{
-  return { 
-    height: height, width: width, depth: depth,
-    near: 0.1, far: -depth, 
-    left: -width / 2, right: width / 2, top: height, bottom: 0,
-    mid: new THREE.Vector3( 0, height / 2, -depth / 2 ) 
-  }
+  return textBlock
 }

@@ -38,4 +38,7 @@ http://threejs.org/examples/#webgl_shadowmap_performance
 
 # TODO
 
-* hide cube face
+* make my window mirror flexbox in 3D
+  * add items to box like an array
+  * treat parent objects like flexbox parents
+  * default margins for inner items
