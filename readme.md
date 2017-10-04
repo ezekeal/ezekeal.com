@@ -1,4 +1,6 @@
 # ezekeal.com
+
+[![Greenkeeper badge](https://badges.greenkeeper.io/ezekeal/ezekeal.com.svg)](https://greenkeeper.io/)
 This is my personal website upteenth revision.
 
 # purpose
